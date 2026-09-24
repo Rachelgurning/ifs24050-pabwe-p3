@@ -49,7 +49,7 @@ function switchTab(tabName, updateHistory = true) {
     });
 }
 
-/* Bagian 2: Expense Tracker (CRUD, Filter, Sort, Modal Dialog, localStorage) */
+/* Bagian 2: Expense Tracker (CRUD, Filter, Sort, Validasi Positif, Modal Dialog, localStorage) */
 function initExpenseTracker() {
     const STORAGE_KEY = "pabwe_expenses";
     let expenses = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
@@ -67,16 +67,21 @@ function initExpenseTracker() {
 
     form.addEventListener("submit", (e) => {
         e.preventDefault();
+        const amountVal = Number(amountInput.value);
+
+        if (!Number.isFinite(amountVal) || amountVal <= 0) {
+            alert("Jumlah pengeluaran/pemasukan harus berupa angka positif yang valid.");
+            return;
+        }
+
         const newExpense = {
             id: Date.now(),
             title: titleInput.value.trim(),
-            amount: Number(amountInput.value),
+            amount: amountVal,
             category: categoryInput.value.trim(),
             type: typeInput.value,
             date: dateInput.value
         };
-
-        if (!newExpense.title || !newExpense.amount || !newExpense.category || !newExpense.date) return;
 
         expenses.push(newExpense);
         saveAndRender();
@@ -170,19 +175,39 @@ function initExpenseTracker() {
 
         showModal("Ubah Catatan Pengeluaran", `
             <div class="space-y-3">
-                <div><label class="text-xs font-medium text-slate-600">Judul</label><input type="text" id="m-title" value="${item.title}" class="w-full px-3 py-2 border rounded-lg text-sm"></div>
-                <div><label class="text-xs font-medium text-slate-600">Jumlah</label><input type="number" id="m-amount" value="${item.amount}" class="w-full px-3 py-2 border rounded-lg text-sm"></div>
-                <div><label class="text-xs font-medium text-slate-600">Kategori</label><input type="text" id="m-category" value="${item.category}" class="w-full px-3 py-2 border rounded-lg text-sm"></div>
-                <div><label class="text-xs font-medium text-slate-600">Tanggal</label><input type="date" id="m-date" value="${item.date}" class="w-full px-3 py-2 border rounded-lg text-sm"></div>
+                <div><label class="text-xs font-medium text-slate-600">Judul</label><input type="text" id="m-title" class="w-full px-3 py-2 border rounded-lg text-sm"></div>
+                <div><label class="text-xs font-medium text-slate-600">Jumlah</label><input type="number" id="m-amount" min="1" class="w-full px-3 py-2 border rounded-lg text-sm"></div>
+                <div><label class="text-xs font-medium text-slate-600">Kategori</label><input type="text" id="m-category" class="w-full px-3 py-2 border rounded-lg text-sm"></div>
+                <div><label class="text-xs font-medium text-slate-600">Tipe</label>
+                    <select id="m-type" class="w-full px-3 py-2 border rounded-lg text-sm bg-white">
+                        <option value="Pemasukan">Pemasukan</option>
+                        <option value="Pengeluaran">Pengeluaran</option>
+                    </select>
+                </div>
+                <div><label class="text-xs font-medium text-slate-600">Tanggal</label><input type="date" id="m-date" class="w-full px-3 py-2 border rounded-lg text-sm"></div>
             </div>
         `, () => {
+            const amountVal = Number(document.getElementById("m-amount").value);
+            if (!Number.isFinite(amountVal) || amountVal <= 0) {
+                alert("Jumlah harus berupa angka positif.");
+                return;
+            }
+
             item.title = document.getElementById("m-title").value.trim();
-            item.amount = Number(document.getElementById("m-amount").value);
+            item.amount = amountVal;
             item.category = document.getElementById("m-category").value.trim();
+            item.type = document.getElementById("m-type").value;
             item.date = document.getElementById("m-date").value;
             saveAndRender();
             hideModal();
         });
+
+        // Gunakan assignment properti DOM agar aman dari XSS/kerusakan tanda kutip
+        document.getElementById("m-title").value = item.title;
+        document.getElementById("m-amount").value = item.amount;
+        document.getElementById("m-category").value = item.category;
+        document.getElementById("m-type").value = item.type;
+        document.getElementById("m-date").value = item.date;
     }
 
     function openExpenseDeleteModal(id) {
@@ -196,7 +221,7 @@ function initExpenseTracker() {
     renderExpenses();
 }
 
-/* Bagian 3: Bookmark Manager (Validasi URL, CRUD Modal, Sort A-Z/Z-A, localStorage) */
+/* Bagian 3: Bookmark Manager (Validasi URL, CRUD Modal Aman XSS, Sort A-Z/Z-A, localStorage) */
 function initBookmarkManager() {
     const STORAGE_KEY = "pabwe_bookmarks";
     let bookmarks = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
@@ -298,10 +323,10 @@ function initBookmarkManager() {
 
         showModal("Ubah Bookmark", `
             <div class="space-y-3">
-                <div><label class="text-xs font-medium text-slate-600">Judul Tautan</label><input type="text" id="m-bm-title" value="${item.title}" class="w-full px-3 py-2 border rounded-lg text-sm"></div>
-                <div><label class="text-xs font-medium text-slate-600">URL</label><input type="url" id="m-bm-url" value="${item.url}" class="w-full px-3 py-2 border rounded-lg text-sm"></div>
-                <div><label class="text-xs font-medium text-slate-600">Kategori</label><input type="text" id="m-bm-category" value="${item.category}" class="w-full px-3 py-2 border rounded-lg text-sm"></div>
-                <div><label class="text-xs font-medium text-slate-600">Catatan</label><input type="text" id="m-bm-note" value="${item.note}" class="w-full px-3 py-2 border rounded-lg text-sm"></div>
+                <div><label class="text-xs font-medium text-slate-600">Judul Tautan</label><input type="text" id="m-bm-title" class="w-full px-3 py-2 border rounded-lg text-sm"></div>
+                <div><label class="text-xs font-medium text-slate-600">URL</label><input type="url" id="m-bm-url" class="w-full px-3 py-2 border rounded-lg text-sm"></div>
+                <div><label class="text-xs font-medium text-slate-600">Kategori</label><input type="text" id="m-bm-category" class="w-full px-3 py-2 border rounded-lg text-sm"></div>
+                <div><label class="text-xs font-medium text-slate-600">Catatan</label><input type="text" id="m-bm-note" class="w-full px-3 py-2 border rounded-lg text-sm"></div>
             </div>
         `, () => {
             const urlVal = document.getElementById("m-bm-url").value.trim();
@@ -316,6 +341,12 @@ function initBookmarkManager() {
             saveAndRender();
             hideModal();
         });
+
+        // Gunakan assignment properti DOM agar aman dari XSS/kerusakan tanda kutip
+        document.getElementById("m-bm-title").value = item.title;
+        document.getElementById("m-bm-url").value = item.url;
+        document.getElementById("m-bm-category").value = item.category;
+        document.getElementById("m-bm-note").value = item.note;
     }
 
     function openBookmarkDeleteModal(id) {
