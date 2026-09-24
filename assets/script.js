@@ -1,381 +1,408 @@
-const $ = (selector) => {
-    const el = document.querySelector(selector);
-    if (!el) throw new Error(`Elemen tidak ditemukan: ${selector}`);
-    return el;
-};
-
-const $all = (selector) => document.querySelectorAll(selector);
-
 document.addEventListener("DOMContentLoaded", () => {
-    const tabButtons = $all(".tab-btn");
-    const tabPanels = $all(".tab-panel");
+    initTabs();
+    initExpenseTracker();
+    initBookmarkManager();
+    initQuizApp();
+});
 
-    const switchTab = (tabName) => {
-        tabPanels.forEach(panel => {
-            if (panel.id === `panel-${tabName}`) {
-                panel.classList.remove("hidden");
-            } else {
-                panel.classList.add("hidden");
-            }
-        });
+function initTabs() {
+    const urlParams = new URLSearchParams(window.location.search);
+    let currentTab = urlParams.get("tab");
+    if (!["expense", "bookmark", "quiz"].includes(currentTab)) {
+        currentTab = "expense";
+        history.replaceState(null, "", "?tab=expense");
+    }
+    switchTab(currentTab, false);
+}
 
-        tabButtons.forEach(btn => {
-            if (btn.dataset.tab === tabName) {
-                btn.className = "tab-btn px-4 py-2 text-sm font-medium rounded-lg transition bg-white text-indigo-600 shadow-sm";
-            } else {
-                btn.className = "tab-btn px-4 py-2 text-sm font-medium rounded-lg transition text-slate-600 hover:text-indigo-600";
-            }
-        });
+function switchTab(tabName, updateHistory = true) {
+    if (updateHistory) {
+        history.replaceState(null, "", `?tab=${tabName}`);
+    }
 
-        localStorage.setItem("active-tab", tabName);
+    const panels = {
+        expense: document.getElementById("panel-expense"),
+        bookmark: document.getElementById("panel-bookmark"),
+        quiz: document.getElementById("panel-quiz")
     };
 
-    tabButtons.forEach(btn => {
-        btn.addEventListener("click", () => {
-            switchTab(btn.dataset.tab);
-        });
+    const buttons = {
+        expense: document.getElementById("tab-expense-btn"),
+        bookmark: document.getElementById("tab-bookmark-btn"),
+        quiz: document.getElementById("tab-quiz-btn")
+    };
+
+    Object.keys(panels).forEach(key => {
+        if (key === tabName) {
+            panels[key].classList.remove("hidden");
+            buttons[key].className = "px-5 py-2 rounded-full text-sm font-medium transition-all bg-indigo-600 text-white shadow-sm";
+        } else {
+            panels[key].classList.add("hidden");
+            buttons[key].className = "px-5 py-2 rounded-full text-sm font-medium transition-all text-slate-600 hover:text-indigo-600";
+        }
+    });
+}
+
+function initExpenseTracker() {
+    const STORAGE_KEY = "pabwe_expenses";
+    let expenses = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+
+    const form = document.getElementById("expense-form");
+    const idInput = document.getElementById("exp-id");
+    const titleInput = document.getElementById("exp-title");
+    const amountInput = document.getElementById("exp-amount");
+    const categoryInput = document.getElementById("exp-category");
+    const typeInput = document.getElementById("exp-type");
+    const dateInput = document.getElementById("exp-date");
+    const cancelBtn = document.getElementById("exp-cancel-btn");
+    const submitBtn = document.getElementById("exp-submit-btn");
+    const searchInput = document.getElementById("exp-search");
+    const filterType = document.getElementById("exp-filter-type");
+
+    form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const id = idInput.value ? Number(idInput.value) : Date.now();
+        const title = titleInput.value.trim();
+        const amount = Number(amountInput.value);
+        const category = categoryInput.value.trim();
+        const type = typeInput.value;
+        const date = dateInput.value;
+
+        if (!title || !amount || !category || !date) return;
+
+        const index = expenses.findIndex(item => item.id === id);
+        if (index !== -1) {
+            expenses[index] = { id, title, amount, category, type, date };
+        } else {
+            expenses.push({ id, title, amount, category, type, date });
+        }
+
+        saveAndRender();
+        resetExpenseForm();
     });
 
-    const savedTab = localStorage.getItem("active-tab") || "expense";
-    switchTab(savedTab);
-
-    let expenses = JSON.parse(localStorage.getItem("expenses")) || [];
-    
-    const formatRupiah = (number) => {
-        return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(number);
+    window.resetExpenseForm = function() {
+        form.reset();
+        idInput.value = "";
+        cancelBtn.classList.add("hidden");
+        submitBtn.textContent = "Tambah Catatan";
     };
 
-    const renderExpenses = () => {
-        const listEl = $("#expense-list");
-        const emptyEl = $("#expense-empty");
-        const searchVal = $("#exp-search").value.toLowerCase();
-        const filterType = $("#exp-filter-type").value;
+    window.editExpense = function(id) {
+        const item = expenses.find(exp => exp.id === id);
+        if (!item) return;
+        idInput.value = item.id;
+        titleInput.value = item.title;
+        amountInput.value = item.amount;
+        categoryInput.value = item.category;
+        typeInput.value = item.type;
+        dateInput.value = item.date;
+        cancelBtn.classList.remove("hidden");
+        submitBtn.textContent = "Simpan Perubahan";
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    };
 
-        const filtered = expenses.filter(item => {
-            const matchSearch = item.title.toLowerCase().includes(searchVal) || item.category.toLowerCase().includes(searchVal);
-            const matchType = filterType === "all" || item.type === filterType;
-            return matchSearch && matchType;
+    window.deleteExpense = function(id) {
+        if (confirm("Apakah anda yakin ingin menghapus catatan ini?")) {
+            expenses = expenses.filter(exp => exp.id !== id);
+            saveAndRender();
+        }
+    };
+
+    function saveAndRender() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(expenses));
+        renderExpenses();
+    }
+
+    window.renderExpenses = function() {
+        const keyword = searchInput.value.toLowerCase();
+        const filter = filterType.value;
+        const tbody = document.getElementById("expense-table-body");
+        const emptyState = document.getElementById("expense-empty");
+
+        let filtered = expenses.filter(item => {
+            const matchKeyword = item.title.toLowerCase().includes(keyword) || item.category.toLowerCase().includes(keyword);
+            const matchFilter = filter === "Semua" || item.type === filter;
+            return matchKeyword && matchFilter;
         });
 
-        listEl.innerHTML = "";
+        filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        tbody.innerHTML = "";
+        let totalIncome = 0;
+        let totalExpense = 0;
+
+        expenses.forEach(item => {
+            if (item.type === "Pemasukan") totalIncome += Number(item.amount);
+            else totalExpense += Number(item.amount);
+        });
+
+        document.getElementById("total-income").textContent = formatRupiah(totalIncome);
+        document.getElementById("total-expense").textContent = formatRupiah(totalExpense);
+        document.getElementById("total-balance").textContent = formatRupiah(totalIncome - totalExpense);
+
         if (filtered.length === 0) {
-            emptyEl.classList.remove("hidden");
+            emptyState.classList.remove("hidden");
         } else {
-            emptyEl.classList.add("hidden");
+            emptyState.classList.add("hidden");
             filtered.forEach(item => {
                 const tr = document.createElement("tr");
-                tr.className = "border-b border-slate-100 hover:bg-slate-50 transition";
+                tr.className = "border-b border-slate-100 hover:bg-slate-50";
                 tr.innerHTML = `
-                    <td class="py-3 px-2 text-slate-500 text-xs">${item.date}</td>
-                    <td class="py-3 px-2 font-medium text-slate-800">${item.title}</td>
-                    <td class="py-3 px-2"><span class="px-2 py-1 bg-slate-100 text-slate-600 rounded-md text-xs">${item.category}</span></td>
-                    <td class="py-3 px-2"><span class="px-2 py-1 ${item.type === 'Pemasukan' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'} rounded-md text-xs font-medium">${item.type}</span></td>
-                    <td class="py-3 px-2 font-semibold ${item.type === 'Pemasukan' ? 'text-emerald-600' : 'text-rose-600'}">${formatRupiah(item.amount)}</td>
-                    <td class="py-3 px-2 text-center space-x-1">
-                        <button onclick="editExpense('${item.id}')" class="px-2 py-1 text-xs bg-amber-50 text-amber-600 rounded hover:bg-amber-100 transition">Ubah</button>
-                        <button onclick="deleteExpense('${item.id}')" class="px-2 py-1 text-xs bg-rose-50 text-rose-600 rounded hover:bg-rose-100 transition">Hapus</button>
+                    <td class="py-3 px-2 text-slate-600">${item.date}</td>
+                    <td class="py-3 px-2 font-medium text-slate-800">${escapeHTML(item.title)}</td>
+                    <td class="py-3 px-2 text-slate-600">${escapeHTML(item.category)}</td>
+                    <td class="py-3 px-2">
+                        <span class="px-2 py-1 rounded-full text-xs font-semibold ${item.type === 'Pemasukan' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}">
+                            ${item.type}
+                        </span>
+                    </td>
+                    <td class="py-3 px-2 font-semibold ${item.type === 'Pemasukan' ? 'text-emerald-700' : 'text-rose-700'}">
+                        ${item.type === 'Pemasukan' ? '+' : '-'}${formatRupiah(item.amount)}
+                    </td>
+                    <td class="py-3 px-2 text-center space-x-2">
+                        <button onclick="editExpense(${item.id})" class="text-indigo-600 hover:text-indigo-800 text-xs font-medium">Ubah</button>
+                        <button onclick="deleteExpense(${item.id})" class="text-rose-600 hover:text-rose-800 text-xs font-medium">Hapus</button>
                     </td>
                 `;
-                listEl.appendChild(tr);
+                tbody.appendChild(tr);
             });
         }
-
-        let totalInc = 0;
-        let totalExp = 0;
-        expenses.forEach(i => {
-            if (i.type === "Pemasukan") totalInc += Number(i.amount);
-            else totalExp += Number(i.amount);
-        });
-
-        $("#total-income").textContent = formatRupiah(totalInc);
-        $("#total-expense").textContent = formatRupiah(totalExp);
-        $("#total-balance").textContent = formatRupiah(totalInc - totalExp);
-
-        localStorage.setItem("expenses", JSON.stringify(expenses));
     };
 
-    $("#expense-form").addEventListener("submit", (e) => {
+    renderExpenses();
+}
+
+function initBookmarkManager() {
+    const STORAGE_KEY = "pabwe_bookmarks";
+    let bookmarks = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+
+    const form = document.getElementById("bookmark-form");
+    const idInput = document.getElementById("bm-id");
+    const titleInput = document.getElementById("bm-title");
+    const urlInput = document.getElementById("bm-url");
+    const categoryInput = document.getElementById("bm-category");
+    const noteInput = document.getElementById("bm-note");
+    const cancelBtn = document.getElementById("bm-cancel-btn");
+    const submitBtn = document.getElementById("bm-submit-btn");
+    const searchInput = document.getElementById("bm-search");
+
+    form.addEventListener("submit", (e) => {
         e.preventDefault();
-        const title = $("#exp-title").value.trim();
-        const amount = Number($("#exp-amount").value);
-        const type = $("#exp-type").value;
-        const category = $("#exp-category").value.trim();
-        const date = $("#exp-date").value;
-
-        if (!title || amount <= 0 || !category || !date) return;
-
-        const newItem = {
-            id: Date.now().toString(),
-            title,
-            amount,
-            type,
-            category,
-            date
-        };
-
-        expenses.push(newItem);
-        renderExpenses();
-        e.target.reset();
-    });
-
-    $("#exp-search").addEventListener("input", renderExpenses);
-    $("#exp-filter-type").addEventListener("change", renderExpenses);
-
-    window.deleteExpense = (id) => {
-        expenses = expenses.filter(i => i.id !== id);
-        renderExpenses();
-    };
-
-    window.editExpense = (id) => {
-        const item = expenses.find(i => i.id === id);
-        if (!item) return;
-
-        $("#modal-title").textContent = "Ubah Catatan Pengeluaran";
-        $("#modal-body").innerHTML = `
-            <input type="text" id="edit-exp-title" value="${item.title}" class="w-full px-3 py-2 border rounded-lg text-sm">
-            <input type="number" id="edit-exp-amount" value="${item.amount}" class="w-full px-3 py-2 border rounded-lg text-sm">
-            <select id="edit-exp-type" class="w-full px-3 py-2 border rounded-lg text-sm">
-                <option value="Pemasukan" ${item.type === 'Pemasukan' ? 'selected' : ''}>Pemasukan</option>
-                <option value="Pengeluaran" ${item.type === 'Pengeluaran' ? 'selected' : ''}>Pengeluaran</option>
-            </select>
-            <input type="text" id="edit-exp-category" value="${item.category}" class="w-full px-3 py-2 border rounded-lg text-sm">
-            <input type="date" id="edit-exp-date" value="${item.date}" class="w-full px-3 py-2 border rounded-lg text-sm">
-        `;
-
-        const modal = $("#edit-modal");
-        modal.classList.remove("hidden");
-
-        const saveHandler = () => {
-            item.title = $("#edit-exp-title").value.trim();
-            item.amount = Number($("#edit-exp-amount").value);
-            item.type = $("#edit-exp-type").value;
-            item.category = $("#edit-exp-category").value.trim();
-            item.date = $("#edit-exp-date").value;
-
-            modal.classList.add("hidden");
-            renderExpenses();
-            $("#modal-save").removeEventListener("click", saveHandler);
-        };
-
-        const cancelHandler = () => {
-            modal.classList.add("hidden");
-            $("#modal-cancel").removeEventListener("click", cancelHandler);
-        };
-
-        $("#modal-save").onclick = saveHandler;
-        $("#modal-cancel").onclick = cancelHandler;
-    };
-
-    let bookmarks = JSON.parse(localStorage.getItem("bookmarks")) || [];
-
-    const renderBookmarks = () => {
-        const gridEl = $("#bookmark-grid");
-        const emptyEl = $("#bookmark-empty");
-        const searchVal = $("#bm-search").value.toLowerCase();
-
-        const filtered = bookmarks.filter(b => 
-            b.title.toLowerCase().includes(searchVal) || 
-            b.url.toLowerCase().includes(searchVal) || 
-            b.category.toLowerCase().includes(searchVal)
-        );
-
-        gridEl.innerHTML = "";
-        if (filtered.length === 0) {
-            emptyEl.classList.remove("hidden");
-        } else {
-            emptyEl.classList.add("hidden");
-            filtered.forEach(b => {
-                const card = document.createElement("div");
-                card.className = "bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between space-y-3";
-                card.innerHTML = `
-                    <div>
-                        <div class="flex justify-between items-start gap-2">
-                            <h3 class="font-semibold text-slate-800 text-sm">${b.title}</h3>
-                            <span class="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded text-xs">${b.category}</span>
-                        </div>
-                        <a href="${b.url}" target="_blank" rel="noopener noreferrer" class="text-xs text-indigo-600 hover:underline break-all mt-1 block">${b.url}</a>
-                        ${b.note ? `<p class="text-xs text-slate-500 mt-2">${b.note}</p>` : ''}
-                    </div>
-                    <div class="flex justify-end space-x-1 pt-2 border-t border-slate-100">
-                        <button onclick="editBookmark('${b.id}')" class="px-2.5 py-1 text-xs bg-amber-50 text-amber-600 rounded hover:bg-amber-100 transition">Ubah</button>
-                        <button onclick="deleteBookmark('${b.id}')" class="px-2.5 py-1 text-xs bg-rose-50 text-rose-600 rounded hover:bg-rose-100 transition">Hapus</button>
-                    </div>
-                `;
-                gridEl.appendChild(card);
-            });
-        }
-
-        localStorage.setItem("bookmarks", JSON.stringify(bookmarks));
-    };
-
-    $("#bookmark-form").addEventListener("submit", (e) => {
-        e.preventDefault();
-        const title = $("#bm-title").value.trim();
-        const url = $("#bm-url").value.trim();
-        const category = $("#bm-category").value.trim();
-        const note = $("#bm-note").value.trim();
-
-        if (!url.startsWith("http://") && !url.startsWith("https://")) {
-            alert("URL harus diawali dengan http:// atau https://");
+        const urlVal = urlInput.value.trim();
+        if (!urlVal.startsWith("http://") && !urlVal.startsWith("https://")) {
+            alert("URL wajib diawali dengan http:// atau https://");
             return;
         }
 
-        const newBookmark = {
-            id: Date.now().toString(),
-            title,
-            url,
-            category,
-            note
-        };
+        const id = idInput.value ? Number(idInput.value) : Date.now();
+        const title = titleInput.value.trim();
+        const category = categoryInput.value.trim();
+        const note = noteInput.value.trim();
 
-        bookmarks.push(newBookmark);
-        renderBookmarks();
-        e.target.reset();
+        const index = bookmarks.findIndex(item => item.id === id);
+        if (index !== -1) {
+            bookmarks[index] = { id, title, url: urlVal, category, note };
+        } else {
+            bookmarks.push({ id, title, url: urlVal, category, note });
+        }
+
+        saveAndRender();
+        resetBookmarkForm();
     });
 
-    $("#bm-search").addEventListener("input", renderBookmarks);
-
-    window.deleteBookmark = (id) => {
-        bookmarks = bookmarks.filter(b => b.id !== id);
-        renderBookmarks();
+    window.resetBookmarkForm = function() {
+        form.reset();
+        idInput.value = "";
+        cancelBtn.classList.add("hidden");
+        submitBtn.textContent = "Simpan Bookmark";
     };
 
-    window.editBookmark = (id) => {
-        const item = bookmarks.find(b => b.id === id);
+    window.editBookmark = function(id) {
+        const item = bookmarks.find(bm => bm.id === id);
         if (!item) return;
-
-        $("#modal-title").textContent = "Ubah Bookmark";
-        $("#modal-body").innerHTML = `
-            <input type="text" id="edit-bm-title" value="${item.title}" class="w-full px-3 py-2 border rounded-lg text-sm">
-            <input type="url" id="edit-bm-url" value="${item.url}" class="w-full px-3 py-2 border rounded-lg text-sm">
-            <input type="text" id="edit-bm-category" value="${item.category}" class="w-full px-3 py-2 border rounded-lg text-sm">
-            <input type="text" id="edit-bm-note" value="${item.note || ''}" class="w-full px-3 py-2 border rounded-lg text-sm">
-        `;
-
-        const modal = $("#edit-modal");
-        modal.classList.remove("hidden");
-
-        const saveHandler = () => {
-            const newUrl = $("#edit-bm-url").value.trim();
-            if (!newUrl.startsWith("http://") && !newUrl.startsWith("https://")) {
-                alert("URL harus diawali dengan http:// atau https://");
-                return;
-            }
-
-            item.title = $("#edit-bm-title").value.trim();
-            item.url = newUrl;
-            item.category = $("#edit-bm-category").value.trim();
-            item.note = $("#edit-bm-note").value.trim();
-
-            modal.classList.add("hidden");
-            renderBookmarks();
-            $("#modal-save").removeEventListener("click", saveHandler);
-        };
-
-        const cancelHandler = () => {
-            modal.classList.add("hidden");
-            $("#modal-cancel").removeEventListener("click", cancelHandler);
-        };
-
-        $("#modal-save").onclick = saveHandler;
-        $("#modal-cancel").onclick = cancelHandler;
+        idInput.value = item.id;
+        titleInput.value = item.title;
+        urlInput.value = item.url;
+        categoryInput.value = item.category;
+        noteInput.value = item.note;
+        cancelBtn.classList.remove("hidden");
+        submitBtn.textContent = "Simpan Perubahan";
+        window.scrollTo({ top: 0, behavior: "smooth" });
     };
 
-    const quizData = [
+    window.deleteBookmark = function(id) {
+        if (confirm("Apakah anda yakin ingin menghapus bookmark ini?")) {
+            bookmarks = bookmarks.filter(bm => bm.id !== id);
+            saveAndRender();
+        }
+    };
+
+    function saveAndRender() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(bookmarks));
+        renderBookmarks();
+    }
+
+    window.renderBookmarks = function() {
+        const keyword = searchInput.value.toLowerCase();
+        const listContainer = document.getElementById("bookmark-list");
+        const emptyState = document.getElementById("bookmark-empty");
+
+        let filtered = bookmarks.filter(item => 
+            item.title.toLowerCase().includes(keyword) || 
+            item.category.toLowerCase().includes(keyword) ||
+            item.url.toLowerCase().includes(keyword)
+        );
+
+        listContainer.innerHTML = "";
+        if (filtered.length === 0) {
+            emptyState.classList.remove("hidden");
+        } else {
+            emptyState.classList.add("hidden");
+            filtered.forEach(item => {
+                const card = document.createElement("div");
+                card.className = "p-4 rounded-xl border border-slate-200 bg-slate-50 flex flex-col justify-between gap-3";
+                card.innerHTML = `
+                    <div>
+                        <span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-full">${escapeHTML(item.category)}</span>
+                        <h3 class="font-bold text-slate-800 text-base mt-1">${escapeHTML(item.title)}</h3>
+                        <a href="${item.url}" target="_blank" rel="noopener noreferrer" class="text-xs text-indigo-600 hover:underline break-all block mt-0.5">${escapeHTML(item.url)}</a>
+                        ${item.note ? `<p class="text-xs text-slate-600 mt-2">${escapeHTML(item.note)}</p>` : ''}
+                    </div>
+                    <div class="flex justify-end gap-3 pt-2 border-t border-slate-200 text-xs">
+                        <button onclick="editBookmark(${item.id})" class="text-indigo-600 font-medium hover:underline">Ubah</button>
+                        <button onclick="deleteBookmark(${item.id})" class="text-rose-600 font-medium hover:underline">Hapus</button>
+                    </div>
+                `;
+                listContainer.appendChild(card);
+            });
+        }
+    };
+
+    renderBookmarks();
+}
+
+function initQuizApp() {
+    const HIGH_SCORE_KEY = "pabwe_quiz_highscore";
+    const questions = [
         {
-            question: "Atribut HTML apa yang digunakan untuk menentukan URL tautan pada tag <a>?",
-            options: ["src", "href", "link", "url"],
+            question: "Atribut HTML apa yang digunakan untuk menentukan URL tujuan pada sebuah tautan (link)?",
+            options: ["src", "href", "link", "target"],
             answer: 1
         },
         {
-            question: "Properti CSS apa yang digunakan untuk mengubah warna teks?",
+            question: "Properti CSS manakah yang digunakan untuk mengubah warna teks?",
             options: ["font-color", "text-color", "color", "background-color"],
             answer: 2
         },
         {
-            question: "Metode JavaScript apa yang digunakan untuk memilih elemen berdasarkan ID?",
-            options: ["querySelectorAll", "getElementById", "getElementsByClassName", "selectElement"],
+            question: "Metode JavaScript apa yang digunakan untuk memilih elemen tunggal berdasarkan selector CSS?",
+            options: ["getElementById", "querySelector", "querySelectorAll", "getElementsByClassName"],
             answer: 1
         },
         {
-            question: "Tag HTML mana yang paling tepat untuk membungkus konten utama halaman?",
-            options: ["<section>", "<main>", "<div>", "<article>"],
-            answer: 1
+            question: "Manakah method array JavaScript yang digunakan untuk menambahkan elemen baru ke akhir array?",
+            options: ["pop", "shift", "unshift", "push"],
+            answer: 3
         },
         {
-            question: "Objek web storage apa di JavaScript yang menyimpan data secara permanen tanpa batas waktu?",
-            options: ["localStorage", "sessionStorage", "cookieStorage", "browserStorage"],
+            question: "Apa fungsi utama dari penyimpanan lokal (localStorage) pada peramban web?",
+            options: ["Menyimpan data sesi tanpa batas waktu kedaluwarsa otomatis", "Mengirim data secara langsung ke server basis data", "Mengamankan kredensial sandi pengguna", "Mempercepat unduhan aset gambar"],
             answer: 0
         }
     ];
 
-    let currentQuizIndex = 0;
+    let currentIdx = 0;
     let score = 0;
-    let highscore = Number(localStorage.getItem("quiz-highscore")) || 0;
+    let highScore = Number(localStorage.getItem(HIGH_SCORE_KEY)) || 0;
 
-    $("#quiz-highscore").textContent = highscore;
+    document.getElementById("high-score").textContent = highScore;
 
-    $("#btn-start-quiz").addEventListener("click", () => {
-        currentQuizIndex = 0;
+    window.startQuiz = function() {
+        currentIdx = 0;
         score = 0;
-        $("#quiz-start-screen").classList.add("hidden");
-        $("#quiz-result-screen").classList.add("hidden");
-        $("#quiz-play-screen").classList.remove("hidden");
-        loadQuizQuestion();
-    });
+        document.getElementById("quiz-start-screen").classList.add("hidden");
+        document.getElementById("quiz-result-screen").classList.add("hidden");
+        document.getElementById("quiz-question-screen").classList.remove("hidden");
+        loadQuestion();
+    };
 
-    const loadQuizQuestion = () => {
-        const currentQ = quizData[currentQuizIndex];
-        $("#quiz-progress").textContent = `Soal ${currentQuizIndex + 1} dari ${quizData.length}`;
-        $("#quiz-current-score").textContent = score;
-        $("#quiz-question").textContent = currentQ.question;
+    function loadQuestion() {
+        const q = questions[currentIdx];
+        document.getElementById("quiz-progress").textContent = `Soal ${currentIdx + 1} dari ${questions.length}`;
+        document.getElementById("quiz-score-live").textContent = `Skor: ${score}`;
+        document.getElementById("quiz-question-text").textContent = q.question;
+        
+        const optionsList = document.getElementById("quiz-options-list");
+        optionsList.innerHTML = "";
+        
+        const feedback = document.getElementById("quiz-feedback");
+        feedback.classList.add("hidden");
+        document.getElementById("quiz-next-btn").classList.add("hidden");
 
-        const optionsEl = $("#quiz-options");
-        optionsEl.innerHTML = "";
-
-        currentQ.options.forEach((opt, idx) => {
+        q.options.forEach((opt, idx) => {
             const btn = document.createElement("button");
-            btn.className = "w-full text-left px-4 py-2.5 border rounded-lg text-sm hover:bg-indigo-50 hover:border-indigo-300 transition";
-            btn.textContent = `${String.fromCharCode(65 + idx)}. ${opt}`;
-            btn.addEventListener("click", () => selectQuizAnswer(idx));
-            optionsEl.appendChild(btn);
+            btn.className = "w-full text-left px-4 py-2.5 rounded-lg border border-slate-200 text-sm font-medium bg-white hover:bg-indigo-50 hover:border-indigo-300 transition";
+            btn.textContent = opt;
+            btn.onclick = () => selectAnswer(idx, btn);
+            optionsList.appendChild(btn);
         });
-    };
+    }
 
-    const selectQuizAnswer = (selectedIndex) => {
-        const currentQ = quizData[currentQuizIndex];
-        if (selectedIndex === currentQ.answer) {
-            score += 1;
-        }
+    function selectAnswer(selectedIndex, selectedBtn) {
+        const q = questions[currentIdx];
+        const optionsList = document.getElementById("quiz-options-list");
+        const buttons = optionsList.querySelectorAll("button");
+        
+        buttons.forEach(b => b.disabled = true);
 
-        currentQuizIndex++;
-        if (currentQuizIndex < quizData.length) {
-            loadQuizQuestion();
+        const feedback = document.getElementById("quiz-feedback");
+        feedback.classList.remove("hidden");
+
+        if (selectedIndex === q.answer) {
+            score += 20;
+            selectedBtn.className = "w-full text-left px-4 py-2.5 rounded-lg border border-emerald-300 text-sm font-medium bg-emerald-50 text-emerald-800 transition";
+            feedback.textContent = "Jawaban anda benar!";
+            feedback.className = "text-sm font-medium text-emerald-700";
         } else {
-            finishQuiz();
+            selectedBtn.className = "w-full text-left px-4 py-2.5 rounded-lg border border-rose-300 text-sm font-medium bg-rose-50 text-rose-800 transition";
+            buttons[q.answer].className = "w-full text-left px-4 py-2.5 rounded-lg border border-emerald-300 text-sm font-medium bg-emerald-50 text-emerald-800 transition";
+            feedback.textContent = "Jawaban anda kurang tepat.";
+            feedback.className = "text-sm font-medium text-rose-700";
+        }
+
+        document.getElementById("quiz-score-live").textContent = `Skor: ${score}`;
+        document.getElementById("quiz-next-btn").classList.remove("hidden");
+    }
+
+    window.nextQuestion = function() {
+        currentIdx++;
+        if (currentIdx < questions.length) {
+            loadQuestion();
+        } else {
+            endQuiz();
         }
     };
 
-    const finishQuiz = () => {
-        $("#quiz-play-screen").classList.add("hidden");
-        $("#quiz-result-screen").classList.remove("hidden");
-        $("#quiz-final-score").textContent = `${score} / ${quizData.length}`;
+    function endQuiz() {
+        document.getElementById("quiz-question-screen").classList.add("hidden");
+        document.getElementById("quiz-result-screen").classList.remove("hidden");
+        document.getElementById("final-score").textContent = score;
 
-        if (score > highscore) {
-            highscore = score;
-            localStorage.setItem("quiz-highscore", highscore);
-            $("#quiz-highscore").textContent = highscore;
+        if (score > highScore) {
+            highScore = score;
+            localStorage.setItem(HIGH_SCORE_KEY, highScore);
+            document.getElementById("high-score").textContent = highScore;
         }
-    };
+    }
+}
 
-    $("#btn-restart-quiz").addEventListener("click", () => {
-        currentQuizIndex = 0;
-        score = 0;
-        $("#quiz-result-screen").classList.add("hidden");
-        $("#quiz-play-screen").classList.remove("hidden");
-        loadQuizQuestion();
-    });
+function formatRupiah(number) {
+    return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(number);
+}
 
-    renderExpenses();
-    renderBookmarks();
-});
+function escapeHTML(str) {
+    return str.replace(/[&<>'"]/g, 
+        tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+    );
+}
