@@ -11,14 +11,14 @@
         body { font-family: 'Inter', sans-serif; }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 min-p-4">
+<body class="bg-slate-50 text-slate-800 min-h-screen">
     <div class="max-w-4xl mx-auto p-4 sm:p-6">
         <header class="text-center mb-8">
             <h1 class="text-2xl sm:text-3xl font-bold text-indigo-700 mb-4">Aplikasi Produktivitas</h1>
             <nav class="inline-flex bg-white p-1.5 rounded-full shadow-sm border border-slate-200 gap-1" aria-label="Navigasi Utama">
-                <button id="tab-expense-btn" onclick="switchTab('expense')" class="px-5 py-2 rounded-full text-sm font-medium transition-all text-slate-600 hover:text-indigo-600">Pengeluaran</button>
-                <button id="tab-bookmark-btn" onclick="switchTab('bookmark')" class="px-5 py-2 rounded-full text-sm font-medium transition-all text-slate-600 hover:text-indigo-600">Bookmark</button>
-                <button id="tab-quiz-btn" onclick="switchTab('quiz')" class="px-5 py-2 rounded-full text-sm font-medium transition-all text-slate-600 hover:text-indigo-600">Kuis</button>
+                <button id="tab-expense-btn" class="px-5 py-2 rounded-full text-sm font-medium transition-all text-slate-600 hover:text-indigo-600">Pengeluaran</button>
+                <button id="tab-bookmark-btn" class="px-5 py-2 rounded-full text-sm font-medium transition-all text-slate-600 hover:text-indigo-600">Bookmark</button>
+                <button id="tab-quiz-btn" class="px-5 py-2 rounded-full text-sm font-medium transition-all text-slate-600 hover:text-indigo-600">Kuis</button>
             </nav>
         </header>
 
@@ -43,36 +43,34 @@
                     </div>
 
                     <form id="expense-form" class="space-y-4">
-                        <input type="hidden" id="exp-id">
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-xs font-medium text-slate-600 mb-1">Judul / Deskripsi</label>
-                                <input type="text" id="exp-title" aria-label="Judul atau Deskripsi Pengeluaran" required placeholder="Contoh: Gaji Bulanan / Makan Siang" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <input type="text" id="exp-title" required placeholder="Contoh: Gaji Bulanan / Makan Siang" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                             </div>
                             <div>
                                 <label class="block text-xs font-medium text-slate-600 mb-1">Jumlah (Rp)</label>
-                                <input type="number" id="exp-amount" aria-label="Jumlah Rupiah Pengeluaran" min="1" required placeholder="100000" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <input type="number" id="exp-amount" min="1" required placeholder="100000" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                             </div>
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div>
                                 <label class="block text-xs font-medium text-slate-600 mb-1">Kategori</label>
-                                <input type="text" id="exp-category" aria-label="Kategori Pengeluaran" required placeholder="Contoh: Makanan / Transport" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <input type="text" id="exp-category" required placeholder="Contoh: Makanan / Transport" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                             </div>
                             <div>
                                 <label class="block text-xs font-medium text-slate-600 mb-1">Tipe</label>
-                                <select id="exp-type" aria-label="Tipe Transaksi Pemasukan atau Pengeluaran" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <select id="exp-type" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
                                     <option value="Pemasukan">Pemasukan</option>
                                     <option value="Pengeluaran">Pengeluaran</option>
                                 </select>
                             </div>
                             <div>
                                 <label class="block text-xs font-medium text-slate-600 mb-1">Tanggal</label>
-                                <input type="date" id="exp-date" aria-label="Tanggal Transaksi Pengeluaran" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <input type="date" id="exp-date" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
                             </div>
                         </div>
-                        <div class="flex justify-end gap-2 pt-2">
-                            <button type="button" id="exp-cancel-btn" onclick="resetExpenseForm()" class="hidden px-4 py-2 bg-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-300 transition">Batal</button>
+                        <div class="flex justify-end pt-2">
                             <button type="submit" id="exp-submit-btn" class="px-5 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition">Tambah Catatan</button>
                         </div>
                     </form>
@@ -80,12 +78,19 @@
 
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                     <div class="flex flex-col sm:flex-row justify-between gap-4 mb-4">
-                        <input type="text" id="exp-search" aria-label="Cari Catatan Pengeluaran" oninput="renderExpenses()" placeholder="Cari catatan..." class="px-3 py-2 border border-slate-300 rounded-lg text-sm w-full sm:w-64 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        <select id="exp-filter-type" aria-label="Filter Berdasarkan Tipe" onchange="renderExpenses()" class="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option value="Semua">Semua Tipe</option>
-                            <option value="Pemasukan">Pemasukan</option>
-                            <option value="Pengeluaran">Pengeluaran</option>
-                        </select>
+                        <input type="text" id="exp-search" placeholder="Cari catatan..." class="px-3 py-2 border border-slate-300 rounded-lg text-sm w-full sm:w-64 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <div class="flex gap-2">
+                            <select id="exp-filter-type" class="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <option value="Semua">Semua Tipe</option>
+                                <option value="Pemasukan">Pemasukan</option>
+                                <option value="Pengeluaran">Pengeluaran</option>
+                            </select>
+                            <select id="exp-sort" class="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <option value="newest">Terbaru</option>
+                                <option value="oldest">Terlama</option>
+                                <option value="highest">Jumlah Tertinggi</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div class="overflow-x-auto">
@@ -112,37 +117,39 @@
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                     <h2 class="text-lg font-bold text-slate-800 mb-4">Kelola Bookmark Tautan</h2>
                     <form id="bookmark-form" class="space-y-4">
-                        <input type="hidden" id="bm-id">
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-xs font-medium text-slate-600 mb-1">Judul Tautan</label>
-                                <input type="text" id="bm-title" aria-label="Judul Tautan Bookmark" required placeholder="Contoh: Google" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <input type="text" id="bm-title" required placeholder="Contoh: Google" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                             </div>
                             <div>
                                 <label class="block text-xs font-medium text-slate-600 mb-1">URL (http:// atau https://)</label>
-                                <input type="url" id="bm-url" aria-label="URL Tautan Bookmark" required placeholder="https://google.com" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <input type="url" id="bm-url" required placeholder="https://google.com" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                             </div>
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-xs font-medium text-slate-600 mb-1">Kategori</label>
-                                <input type="text" id="bm-category" aria-label="Kategori Bookmark" required placeholder="Contoh: Belajar" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <input type="text" id="bm-category" required placeholder="Contoh: Belajar" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                             </div>
                             <div>
                                 <label class="block text-xs font-medium text-slate-600 mb-1">Catatan (Opsional)</label>
-                                <input type="text" id="bm-note" aria-label="Catatan Opsional Bookmark" placeholder="Keterangan singkat..." class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <input type="text" id="bm-note" placeholder="Keterangan singkat..." class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                             </div>
                         </div>
-                        <div class="flex justify-end gap-2 pt-2">
-                            <button type="button" id="bm-cancel-btn" onclick="resetBookmarkForm()" class="hidden px-4 py-2 bg-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-300 transition">Batal</button>
+                        <div class="flex justify-end pt-2">
                             <button type="submit" id="bm-submit-btn" class="px-5 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition">Simpan Bookmark</button>
                         </div>
                     </form>
                 </div>
 
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                    <div class="mb-4">
-                        <input type="text" id="bm-search" aria-label="Cari Bookmark" oninput="renderBookmarks()" placeholder="Cari bookmark..." class="px-3 py-2 border border-slate-300 rounded-lg text-sm w-full sm:w-64 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <div class="flex flex-col sm:flex-row justify-between gap-4 mb-4">
+                        <input type="text" id="bm-search" placeholder="Cari bookmark..." class="px-3 py-2 border border-slate-300 rounded-lg text-sm w-full sm:w-64 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <select id="bm-sort" class="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="az">Urutkan A-Z</option>
+                            <option value="za">Urutkan Z-A</option>
+                        </select>
                     </div>
                     <div id="bookmark-list" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
                     <div id="bookmark-empty" class="text-center py-8 text-slate-600 text-sm hidden">Belum ada data bookmark tersimpan.</div>
@@ -156,7 +163,7 @@
                         <h2 class="text-xl font-bold text-slate-800 mb-2">Kuis Interaktif Pemrograman Web</h2>
                         <p class="text-sm text-slate-600 mb-6">Uji pemahaman anda mengenai topik HTML, CSS, JavaScript, dan DOM.</p>
                         <p class="text-xs font-semibold text-indigo-700 mb-4">Skor Tertinggi Anda: <span id="high-score">0</span></p>
-                        <button onclick="startQuiz()" class="px-6 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition">Mulai Kuis</button>
+                        <button id="quiz-start-btn" class="px-6 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition">Mulai Kuis</button>
                     </div>
 
                     <div id="quiz-question-screen" class="hidden text-left space-y-4">
@@ -168,7 +175,7 @@
                         <div id="quiz-options-list" class="space-y-2"></div>
                         <div id="quiz-feedback" class="text-sm font-medium hidden"></div>
                         <div class="flex justify-end pt-2">
-                            <button id="quiz-next-btn" onclick="nextQuestion()" class="hidden px-5 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition">Lanjut</button>
+                            <button id="quiz-next-btn" class="hidden px-5 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition">Lanjut</button>
                         </div>
                     </div>
 
@@ -177,7 +184,7 @@
                         <p class="text-sm text-slate-600">Skor akhir yang anda dapatkan:</p>
                         <p id="final-score" class="text-3xl font-extrabold text-indigo-600">0</p>
                         <div class="pt-4">
-                            <button onclick="startQuiz()" class="px-6 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition">Ulangi Kuis</button>
+                            <button id="quiz-restart-btn" class="px-6 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition">Ulangi Kuis</button>
                         </div>
                     </div>
                 </div>
@@ -187,6 +194,18 @@
         <footer class="mt-8 py-4 text-center text-xs text-slate-600 border-t border-slate-200">
             Praktikum Pemrograman Web • Single Page Application
         </footer>
+    </div>
+
+    <!-- MODAL EDIT / HAPUS UMUM -->
+    <div id="app-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
+            <h3 id="modal-title" class="text-lg font-bold text-slate-800">Judul Modal</h3>
+            <div id="modal-body"></div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button id="modal-cancel-btn" class="px-4 py-2 bg-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-300 transition">Batal</button>
+                <button id="modal-confirm-btn" class="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition">Simpan</button>
+            </div>
+        </div>
     </div>
 
     <script src="assets/script.js"></script>
