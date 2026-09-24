@@ -1,4 +1,3 @@
-/* Inisialisasi utama saat DOM selesai dimuat */
 document.addEventListener("DOMContentLoaded", () => {
     initTabs();
     initExpenseTracker();
@@ -6,7 +5,15 @@ document.addEventListener("DOMContentLoaded", () => {
     initQuizApp();
 });
 
-/* Bagian 1: Pengelolaan Tab via Query String URL */
+function getStorageData(key, fallback = []) {
+    try {
+        const data = localStorage.getItem(key);
+        return data ? JSON.parse(data) : fallback;
+    } catch (e) {
+        return fallback;
+    }
+}
+
 function initTabs() {
     const urlParams = new URLSearchParams(window.location.search);
     let currentTab = urlParams.get("tab");
@@ -49,10 +56,9 @@ function switchTab(tabName, updateHistory = true) {
     });
 }
 
-/* Bagian 2: Expense Tracker (CRUD, Filter, Sort, Validasi Positif, Modal Dialog, localStorage) */
 function initExpenseTracker() {
     const STORAGE_KEY = "pabwe_expenses";
-    let expenses = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    let expenses = getStorageData(STORAGE_KEY, []);
 
     const form = document.getElementById("expense-form");
     const titleInput = document.getElementById("exp-title");
@@ -202,7 +208,6 @@ function initExpenseTracker() {
             hideModal();
         });
 
-        // Gunakan assignment properti DOM agar aman dari XSS/kerusakan tanda kutip
         document.getElementById("m-title").value = item.title;
         document.getElementById("m-amount").value = item.amount;
         document.getElementById("m-category").value = item.category;
@@ -221,10 +226,9 @@ function initExpenseTracker() {
     renderExpenses();
 }
 
-/* Bagian 3: Bookmark Manager (Validasi URL, CRUD Modal Aman XSS, Sort A-Z/Z-A, localStorage) */
 function initBookmarkManager() {
     const STORAGE_KEY = "pabwe_bookmarks";
-    let bookmarks = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    let bookmarks = getStorageData(STORAGE_KEY, []);
 
     const form = document.getElementById("bookmark-form");
     const titleInput = document.getElementById("bm-title");
@@ -304,7 +308,7 @@ function initBookmarkManager() {
                     <div>
                         <span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-full">${escapeHTML(item.category)}</span>
                         <h3 class="font-bold text-slate-800 text-base mt-1">${escapeHTML(item.title)}</h3>
-                        <a href="${item.url}" target="_blank" rel="noopener noreferrer" class="text-xs text-indigo-600 hover:underline break-all block mt-0.5">${escapeHTML(item.url)}</a>
+                        <a href="${escapeHTML(item.url)}" target="_blank" rel="noopener noreferrer" class="text-xs text-indigo-600 hover:underline break-all block mt-0.5">${escapeHTML(item.url)}</a>
                         ${item.note ? `<p class="text-xs text-slate-600 mt-2">${escapeHTML(item.note)}</p>` : ''}
                     </div>
                     <div class="flex justify-end gap-3 pt-2 border-t border-slate-200 text-xs">
@@ -342,7 +346,6 @@ function initBookmarkManager() {
             hideModal();
         });
 
-        // Gunakan assignment properti DOM agar aman dari XSS/kerusakan tanda kutip
         document.getElementById("m-bm-title").value = item.title;
         document.getElementById("m-bm-url").value = item.url;
         document.getElementById("m-bm-category").value = item.category;
@@ -360,7 +363,6 @@ function initBookmarkManager() {
     renderBookmarks();
 }
 
-/* Bagian 4: Quiz App (Array of Object, Scoring, High Score, Event Listener) */
 function initQuizApp() {
     const HIGH_SCORE_KEY = "pabwe_quiz_highscore";
     const questions = [
@@ -394,6 +396,7 @@ function initQuizApp() {
     let currentIdx = 0;
     let score = 0;
     let highScore = Number(localStorage.getItem(HIGH_SCORE_KEY)) || 0;
+    const pointsPerQuestion = Math.round(100 / questions.length);
 
     document.getElementById("high-score").textContent = highScore;
 
@@ -443,7 +446,7 @@ function initQuizApp() {
         feedback.classList.remove("hidden");
 
         if (selectedIndex === q.answer) {
-            score += 20;
+            score += pointsPerQuestion;
             selectedBtn.className = "w-full text-left px-4 py-2.5 rounded-lg border border-emerald-300 text-sm font-medium bg-emerald-50 text-emerald-800 transition";
             feedback.textContent = "Jawaban anda benar!";
             feedback.className = "text-sm font-medium text-emerald-700";
@@ -480,7 +483,6 @@ function initQuizApp() {
     }
 }
 
-/* Bagian 5: Utilitas Global (Modal Pendukung & Keamanan XSS) */
 function showModal(title, htmlContent, onConfirm) {
     const modal = document.getElementById("app-modal");
     document.getElementById("modal-title").textContent = title;
